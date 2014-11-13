@@ -1,0 +1,77 @@
+module MultipartMIMEParser
+    (Header (..),
+     Post (..),
+     parseContent,
+     parseHeader,
+     parseHeaders,
+     parsePost) where
+
+import Control.Applicative ((<$>), (<*>), (<*))
+import Text.ParserCombinators.Parsec hiding (Line)
+
+data Header = Header { hName  :: String
+                     , hValue :: String
+                     , hAddl  :: [(String,String)] } deriving (Eq, Show)
+
+{-data Content = Content String
+ -             | Post { pHeaders :: [Header]
+ -                    , pContent :: Content } deriving (Eq, Show)
+ -}
+data Post = Post { pHeaders :: [Header]
+                 , pContent :: String } deriving (Eq, Show)
+
+parseHeader :: String -> Header
+parseHeader s = case parse header "" s of
+                  Left  e -> error $ "Error parsing header.\n" ++ show e
+                  Right r -> r
+
+parseHeaders :: String -> [Header]
+parseHeaders s = case parse headers "" s of
+                   Left  e -> error $ "Error parsing headers.\n" ++ show e
+                   Right r -> r
+
+parseContent :: String -> String
+parseContent s = case parse content "" s of
+                   Left  e -> error $ "Error parsing content.\n" ++ show e
+                   Right r -> r
+
+parsePost :: String -> Post
+parsePost s = case parse post "" s of
+                Left  e -> error $ "Error parsing post.\n" ++ show e
+                Right r -> r
+
+post :: Parser Post
+post = Post <$> headers <*> content
+
+content :: Parser String
+content = do
+  xs <- manyTill line blankField
+  return $ unlines xs
+  where line = manyTill anyChar newline
+
+headers :: Parser [Header]
+headers = manyTill header blankField
+
+blankField = newline
+
+header :: Parser Header
+header =
+    Header <$> fieldName  <* string ":"
+           <*> fieldValue <* optional (try newline)
+           <*> nameValuePairs
+  where fieldName = many $ noneOf ":"
+        fieldValue = spaces >> many (noneOf "\r\n;")
+        nameValuePairs = option [] $ many nameValuePair
+
+nameValuePair :: Parser (String,String)
+nameValuePair = do
+  try $ do n <- name
+           v <- value
+           return $ (n,v)
+
+name :: Parser String
+name = string ";" >> spaces >> many (noneOf "=")
+
+value :: Parser String
+value = string "=" >> between quote quote (many (noneOf "\r\n;\""))
+  where quote = string "\""
