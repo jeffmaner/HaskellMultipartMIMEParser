@@ -1,6 +1,7 @@
 module MultipartMIMEParser
     (Header (..),
      Post (..),
+     boundary, -- TODO: Testing only.
      parseContent,
      parseHeader,
      parseHeaders,
@@ -18,7 +19,7 @@ data Header = Header { hName  :: String
  -                    , pContent :: Content } deriving (Eq, Show)
  -}
 data Post = Post { pHeaders :: [Header]
-                 , pContent :: String } deriving (Eq, Show)
+                 , pContent :: [String] } deriving (Eq, Show)
 
 parseHeader :: String -> Header
 parseHeader s = case parse header "" s of
@@ -41,7 +42,17 @@ parsePost s = case parse post "" s of
                 Right r -> r
 
 post :: Parser Post
-post = Post <$> headers <*> content
+post = do -- Post <$> headers <*> many content
+  hs <- headers
+  c  <- case boundary hs of
+         "" -> content >>= \s->return [s]
+         b  -> content `sepEndBy` (string b)
+  return $ Post { pHeaders=hs, pContent=c }
+  -- where
+boundary hs = case lookup "boundary" $ concatMap hAddl hs of
+                Just b  -> "--" ++ b
+                Nothing -> ""
+        -- TODO: lookup "boundary" needs to be case-insensitive.
 
 content :: Parser String
 content = do
