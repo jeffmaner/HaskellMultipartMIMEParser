@@ -5,7 +5,8 @@ module MultipartMIMEParser
      parseContent,
      parseHeader,
      parseHeaders,
-     parsePost) where
+     parsePost,
+     parsePosts) where
 
 import Control.Applicative ((<$>), (<*>), (<*))
 import Text.ParserCombinators.Parsec hiding (Line)
@@ -41,18 +42,32 @@ parsePost s = case parse post "" s of
                 Left  e -> error $ "Error parsing post.\n" ++ show e
                 Right r -> r
 
+parsePosts :: String -> [Post]
+parsePosts s = case parse posts "" s of
+                Left  e -> error $ "Error parsing post.\n" ++ show e
+                Right r -> r
+
+posts :: Parser [Post]
+posts = many post
+
 post :: Parser Post
 post = do -- Post <$> headers <*> many content
   hs <- headers
   c  <- case boundary hs of
          "" -> content >>= \s->return [s]
-         b  -> content `sepEndBy` (string b)
+         b  -> newline >> (string b) >> newline >>
+              manyTill content (string b) >>= \xs->return [unlines xs]
+         -- b  -> newline >> (string b) >> newline >> everything `endBy` (string b)
   return $ Post { pHeaders=hs, pContent=c }
   -- where
 boundary hs = case lookup "boundary" $ concatMap hAddl hs of
                 Just b  -> "--" ++ b
                 Nothing -> ""
         -- TODO: lookup "boundary" needs to be case-insensitive.
+
+-- Debugging:
+everything :: Parser String
+everything = manyTill anyChar eof
 
 content :: Parser String
 content = do
