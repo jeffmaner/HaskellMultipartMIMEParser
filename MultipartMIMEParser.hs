@@ -1,5 +1,6 @@
 module MultipartMIMEParser
-    (Header (..),
+    (Content (..),
+     Header (..),
      Post (..),
      boundary, -- TODO: Testing only.
      parseContent,
@@ -9,18 +10,17 @@ module MultipartMIMEParser
      parsePosts) where
 
 import Control.Applicative ((<$>), (<*>), (<*))
+import Data.Char (toLower)
 import Text.ParserCombinators.Parsec hiding (Line)
 
 data Header = Header { hName  :: String
                      , hValue :: String
                      , hAddl  :: [(String,String)] } deriving (Eq, Show)
 
-{-data Content = Content String
- -             | Post { pHeaders :: [Header]
- -                    , pContent :: Content } deriving (Eq, Show)
- -}
-data Post = Post { pHeaders :: [Header]
-                 , pContent :: [String] } deriving (Eq, Show)
+data Content a = Content a | Posts [Post a] deriving (Eq, Show)
+
+data Post a = Post { pHeaders :: [Header]
+                   , pContent :: [Content a] } deriving (Eq, Show)
 
 parseHeader :: String -> Header
 parseHeader s = case parse header "" s of
@@ -32,47 +32,47 @@ parseHeaders s = case parse headers "" s of
                    Left  e -> error $ "Error parsing headers.\n" ++ show e
                    Right r -> r
 
-parseContent :: String -> String
+parseContent :: String -> Content String
 parseContent s = case parse content "" s of
                    Left  e -> error $ "Error parsing content.\n" ++ show e
                    Right r -> r
 
-parsePost :: String -> Post
+parsePost :: String -> Post String
 parsePost s = case parse post "" s of
                 Left  e -> error $ "Error parsing post.\n" ++ show e
                 Right r -> r
 
-parsePosts :: String -> [Post]
+parsePosts :: String -> Content String
 parsePosts s = case parse posts "" s of
                 Left  e -> error $ "Error parsing post.\n" ++ show e
                 Right r -> r
 
-posts :: Parser [Post]
-posts = many post
+posts :: Parser (Content String)
+posts = Posts <$> many post
 
-post :: Parser Post
-post = do -- Post <$> headers <*> many content
+post :: Parser (Post String)
+post = do
   hs <- headers
   c  <- case boundary hs of
          "" -> content >>= \s->return [s]
          b  -> newline >> (string b) >> newline >>
-              manyTill content (string b) >>= \xs->return [unlines xs]
-         -- b  -> newline >> (string b) >> newline >> everything `endBy` (string b)
+              manyTill content (string b) -- >>= \cs->return $ liftM post cs
   return $ Post { pHeaders=hs, pContent=c }
   -- where
-boundary hs = case lookup "boundary" $ concatMap hAddl hs of
+boundary hs = case lookup "boundary" $ concatMap (namesToLower . hAddl) hs of
                 Just b  -> "--" ++ b
                 Nothing -> ""
-        -- TODO: lookup "boundary" needs to be case-insensitive.
+  where nameToLower (n,v) = (map toLower n, v)
+        namesToLower = map nameToLower
 
 -- Debugging:
 everything :: Parser String
 everything = manyTill anyChar eof
 
-content :: Parser String
+content :: Parser (Content String)
 content = do
   xs <- manyTill line blankField
-  return $ unlines xs
+  return $ Content $ unlines xs
   where line = manyTill anyChar newline
 
 headers :: Parser [Header]

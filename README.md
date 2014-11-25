@@ -1,6 +1,8 @@
 Multipart MIME Parser
 =====================
 
+Project abandoned.
+
 [Haskell][1] playground to explore [test-driven development][2] of a
 [multipart MIME][3] parser. I'm working on the same thing in [F#][4] for work,
 but needed a different perspective on the problem.

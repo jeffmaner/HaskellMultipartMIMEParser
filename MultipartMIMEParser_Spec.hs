@@ -62,16 +62,16 @@ main = hspec $ do
                                , "</Preamble>"
                                , "" ])
        `shouldBe`
-       (unlines [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"
-                , "<!DOCTYPE Preamble SYSTEM \"Preamble_MS_V02_00.dtd\">"
-                , "<Preamble>"
-                , "  <standardName>"
-                , "    <GlobalAdministeringAuthorityCode>RosettaNet</GlobalAdministeringAuthorityCode>"
-                , "  </standardName>"
-                , "  <standardVersion>"
-                , "    <VersionIdentifier>V02.00</VersionIdentifier>"
-                , "  </standardVersion>"
-                , "</Preamble>" ])
+       (Content $ unlines [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"
+                          , "<!DOCTYPE Preamble SYSTEM \"Preamble_MS_V02_00.dtd\">"
+                          , "<Preamble>"
+                          , "  <standardName>"
+                          , "    <GlobalAdministeringAuthorityCode>RosettaNet</GlobalAdministeringAuthorityCode>"
+                          , "  </standardName>"
+                          , "  <standardVersion>"
+                          , "    <VersionIdentifier>V02.00</VersionIdentifier>"
+                          , "  </standardVersion>"
+                          , "</Preamble>" ])
 
     it "Handles a simple post." $
        (parsePost $ unlines [ "Content-Type: Application/XML"
@@ -95,16 +95,16 @@ main = hspec $ do
                          , Header { hName="Content-Transfer-Encoding", hValue="binary", hAddl=[] }
                          , Header { hName="Content-Location", hValue="RN-Preamble", hAddl=[] }
                          , Header { hName="Content-ID", hValue="<1430586.1160080657050.JavaMail.webmethods@exshaw>", hAddl=[] } ]
-            , pContent = [unlines [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"
-                                  , "<!DOCTYPE Preamble SYSTEM \"Preamble_MS_V02_00.dtd\">"
-                                  , "<Preamble>"
-                                  , "  <standardName>"
-                                  , "    <GlobalAdministeringAuthorityCode>RosettaNet</GlobalAdministeringAuthorityCode>"
-                                  , "  </standardName>"
-                                  , "  <standardVersion>"
-                                  , "    <VersionIdentifier>V02.00</VersionIdentifier>"
-                                  , "  </standardVersion>"
-                                  , "</Preamble>" ]] }
+            , pContent = [Content $ unlines [ "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"
+                                            , "<!DOCTYPE Preamble SYSTEM \"Preamble_MS_V02_00.dtd\">"
+                                            , "<Preamble>"
+                                            , "  <standardName>"
+                                            , "    <GlobalAdministeringAuthorityCode>RosettaNet</GlobalAdministeringAuthorityCode>"
+                                            , "  </standardName>"
+                                            , "  <standardVersion>"
+                                            , "    <VersionIdentifier>V02.00</VersionIdentifier>"
+                                            , "  </standardVersion>"
+                                            , "</Preamble>" ]] }
 
     it "Handles a complex post." $
        (parsePost $ unlines [ "content-type: Multipart/related; boundary=\"RN-Http-Body-Boundary\"; type=\"multipart/related\""
@@ -172,7 +172,7 @@ main = hspec $ do
                             , "" ])
        `shouldBe`
        Post { pHeaders=[ Header { hName="content-type", hValue="Multipart/related", hAddl=[("boundary", "RN-Http-Body-Boundary"), ("type", "multipart/related")] }]
-            , pContent=[""] }
+            , pContent=[Content ""] }
 
     it "Returns a boundary when a boundary is given." $
        boundary [ Header { hName="content-type", hValue="Multipart/related", hAddl=[("boundary", "RN-Http-Body-Boundary"), ("type", "multipart/related")] }]
